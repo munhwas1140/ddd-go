@@ -15,4 +15,6 @@ var (
 
 type CustomerRepository interface {
 	Get(uuid.UUID) (aggregate.Customer, error)
+	Add(aggregate.Customer) error
+	Update(aggregate.Customer) error
 }
