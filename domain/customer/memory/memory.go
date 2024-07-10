@@ -40,9 +40,19 @@ func (mr *MemoryRepository) Add(c aggregate.Customer) error {
 		return fmt.Errorf("customer already exists :%w", customer.ErrFailedToAddCustomer)
 	}
 
+	mr.Lock()
+	mr.customers[c.GetID()] = c
+	mr.Unlock()
 	return nil
 }
 
-func (mr *MemoryRepository) Update(aggregate.Customer) error {
+func (mr *MemoryRepository) Update(c aggregate.Customer) error {
+	if _, ok := mr.customers[c.GetID()]; !ok {
+		return fmt.Errorf("customer does not exist: %w", customer.ErrUpdateCustomer)
+	}
+
+	mr.Lock()
+	mr.customers[c.GetID()] = c
+	mr.Unlock()
 	return nil
 }
