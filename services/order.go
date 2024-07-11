@@ -1,12 +1,14 @@
 package services
 
 import (
+	"context"
 	"log"
 
 	"github.com/google/uuid"
 	"github.com/munhwas1140/ddd-go/aggregate"
 	"github.com/munhwas1140/ddd-go/domain/customer"
 	"github.com/munhwas1140/ddd-go/domain/customer/memory"
+	"github.com/munhwas1140/ddd-go/domain/customer/mongo"
 	"github.com/munhwas1140/ddd-go/domain/product"
 	prodmem "github.com/munhwas1140/ddd-go/domain/product/memory"
 )
@@ -44,6 +46,17 @@ func WithMemoryCustomerRepository() OrderConfiguration {
 	return WithCustomerRepository(cr)
 }
 
+func WithMongoCustomerRepository(ctx context.Context, connectionString string) OrderConfiguration {
+	return func(os *OrderService) error {
+		cr, err := mongo.New(ctx, connectionString)
+		if err != nil {
+			return err
+		}
+		os.customers = cr
+		return nil
+	}
+}
+
 func WithMemoryProductRepository(products []aggregate.Product) OrderConfiguration {
 	return func(os *OrderService) error {
 		pr := prodmem.New()
@@ -58,11 +71,11 @@ func WithMemoryProductRepository(products []aggregate.Product) OrderConfiguratio
 	}
 }
 
-func (o *OrderService) CreateOrder(customerID uuid.UUID, productsIDs []uuid.UUID) error {
+func (o *OrderService) CreateOrder(customerID uuid.UUID, productsIDs []uuid.UUID) (float64, error) {
 	// Fetch the customer
 	c, err := o.customers.Get(customerID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var products []aggregate.Product
@@ -71,7 +84,7 @@ func (o *OrderService) CreateOrder(customerID uuid.UUID, productsIDs []uuid.UUID
 	for _, id := range productsIDs {
 		p, err := o.products.GetByID(id)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		products = append(products, p)
@@ -79,5 +92,5 @@ func (o *OrderService) CreateOrder(customerID uuid.UUID, productsIDs []uuid.UUID
 	}
 
 	log.Printf("Customer: %s has orderd %d products", c.GetID(), len(products))
-	return nil
+	return total, nil
 }
